@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 import base64
@@ -13,16 +13,19 @@ CORS(app)
 def get_data():
     return jsonify({'message': 'Hello from Flask!'})
 
-@app.route('/google-gemma')
+@app.route('/google-gemma', methods=['POST'])
 def test():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
+
+    image_file = request.files['image']
+    image_bytes = image_file.read()
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
     client = InferenceClient(
         provider="nebius",
         api_key="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",
     )
-
-    with open("./test_images/kruispunt_vlaanderen.jpg", "rb") as f:
-        image_bytes = f.read()
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
     completion = client.chat.completions.create(
         model="google/gemma-3-27b-it",
@@ -32,7 +35,7 @@ def test():
                 "content": [
                     {
                         "type": "text",
-                        "text": "Geef de namen van de verkeersborden op de afbeelding en leg heel kort uit wat ze betekenen."
+                        "text": "Lijst in bulletpoints de verkeersborden op de afbeelding op met een korte uitleg van wat ze betekenen. En houdt het enkel op de bulletpoints."
                     },
                     {
                         "type": "image_url",
