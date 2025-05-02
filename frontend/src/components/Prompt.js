@@ -2,53 +2,82 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 const Prompt = ({ imageId, setImageId }) => {
-  const [trafficSignsText, setTrafficSignsText] = useState(
-    "Traffic signs help regulate, warn, and guide traffic. Some common examples include stop signs, yield signs, and speed limit signs."
+  // Create state variables for both model outputs
+  const [geminiText, setGeminiText] = useState(
+    "Traffic signs help regulate, warn, and guide traffic. Click 'Explain' to analyze the image with Gemini."
+  );
+  const [llamaText, setLlamaText] = useState(
+    "Traffic signs help regulate, warn, and guide traffic. Click 'Explain' to analyze the image with Llama."
   );
   const [trafficRulesText, setTrafficRulesText] = useState(
     "Traffic rules are laws that govern the movement of vehicles and pedestrians. They are designed to ensure safety and efficiency on the roads."
   );
-  const [loading, setLoading] = useState(false); // Loading state
+  const [activeTab, setActiveTab] = useState("gemini");
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [llamaLoading, setLlamaLoading] = useState(false);
 
-  const handleExplanationClick = async (imageId) => {
-    setLoading(true); // Start loading
+  const handleExplanationClick = async () => {
+    if (!imageId) {
+      alert("Please enter an image ID first");
+      return;
+    }
+
+    // Start loading for both models
+    setGeminiLoading(true);
+    setLlamaLoading(true);
+
     try {
-      const imageUrl = await getImageUrlFromMapillary(imageId);
-      const result_text = await sendImageToFlask(imageUrl);
-      setTrafficSignsText(result_text); // Set response text
+      // Call both APIs in parallel
+      const geminiPromise = sendImageIdToBackend(imageId, "gemini");
+      const llamaPromise = sendImageIdToBackend(imageId, "llama");
+
+      // Wait for both promises to resolve
+      const [geminiResult, llamaResult] = await Promise.allSettled([
+        geminiPromise,
+        llamaPromise,
+      ]);
+
+      // Update state based on results
+      if (geminiResult.status === "fulfilled") {
+        setGeminiText(geminiResult.value);
+      } else {
+        setGeminiText("Error fetching Gemini data: " + geminiResult.reason);
+      }
+
+      if (llamaResult.status === "fulfilled") {
+        setLlamaText(llamaResult.value);
+      } else {
+        setLlamaText("Error fetching Llama data: " + llamaResult.reason);
+      }
     } catch (error) {
-      setTrafficSignsText("Error fetching data. Please try again.");
+      console.error("Error during explanation process:", error);
     } finally {
-      setLoading(false); // Stop loading once done
+      setGeminiLoading(false);
+      setLlamaLoading(false);
     }
   };
 
-  const sendImageToFlask = async (imageUrl) => {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
+  const sendImageIdToBackend = async (imageId, model) => {
+    try {
+      const endpoint = model === "gemini" ? "/gemini" : "/llama";
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId }),
+      });
 
-    const formData = new FormData();
-    formData.append("image", blob, "mapillary.jpg");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Server error");
+      }
 
-    const res = await fetch("http://localhost:5000/google-gemma", {
-      method: "POST",
-      body: formData,
-    });
-
-    const result = await res.json();
-    console.log("Flask Response:", result.message);
-    return result.message;
-  };
-
-  const getImageUrlFromMapillary = async (imageId) => {
-    const accessToken =
-      "MLY|29035766876069488|34bbc2018881031154e33f7953b7ccc4";
-    const url = `https://graph.mapillary.com/${imageId}?access_token=${accessToken}&fields=thumb_2048_url`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    return data.thumb_2048_url; // High-resolution image URL
+      const data = await response.json();
+      console.log(`${model.toUpperCase()} Response:`, data);
+      return data.message;
+    } catch (err) {
+      console.error(`Error sending image ID to ${model}:`, err);
+      throw err;
+    }
   };
 
   return (
@@ -73,16 +102,54 @@ const Prompt = ({ imageId, setImageId }) => {
         />
       </div>
 
-      {/* Traffic Signs output field */}
+      {/* Model Tabs */}
+      <div className="mb-2">
+        <div className="flex border-b border-gray-200">
+          <button
+            className={`py-2 px-4 font-medium focus:outline-none ${
+              activeTab === "gemini"
+                ? "text-blue-500 border-b-2 border-blue-500"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+            onClick={() => setActiveTab("gemini")}
+          >
+            Gemini
+            {geminiLoading && (
+              <span className="ml-2 inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></span>
+            )}
+          </button>
+          <button
+            className={`py-2 px-4 font-medium focus:outline-none ${
+              activeTab === "llama"
+                ? "text-blue-500 border-b-2 border-blue-500"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+            onClick={() => setActiveTab("llama")}
+          >
+            Llama
+            {llamaLoading && (
+              <span className="ml-2 inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Model Content based on active tab */}
       <div className="mb-6">
-        <h3 className="text-xl font-semibold mb-2">Traffic Signs</h3>
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-300 min-h-[100px]">
-          {loading ? (
-            <div className="text-gray-500 italic animate-pulse">
-              Loading explanation...
-            </div>
+        <h3 className="text-xl font-semibold mb-2">Traffic Sign Analysis</h3>
+        <div className="p-4 bg-gray-50 rounded-lg border border-gray-300 min-h-[200px] overflow-y-auto">
+          {activeTab === "gemini" ? (
+            geminiLoading ? (
+              <div className="text-gray-500 italic">
+                Analyzing with Gemini...
+              </div>
+            ) : (
+              <ReactMarkdown>{geminiText}</ReactMarkdown>
+            )
+          ) : llamaLoading ? (
+            <div className="text-gray-500 italic">Analyzing with Llama...</div>
           ) : (
-            <ReactMarkdown>{trafficSignsText}</ReactMarkdown>
+            <ReactMarkdown>{llamaText}</ReactMarkdown>
           )}
         </div>
       </div>
@@ -98,10 +165,15 @@ const Prompt = ({ imageId, setImageId }) => {
       {/* Explanation button */}
       <div className="mt-4">
         <button
-          onClick={() => handleExplanationClick(imageId)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          onClick={handleExplanationClick}
+          disabled={geminiLoading || llamaLoading}
+          className={`px-4 py-2 text-white rounded-lg transition ${
+            geminiLoading || llamaLoading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          Explain
+          {geminiLoading || llamaLoading ? "Analyzing..." : "Analyze Image"}
         </button>
       </div>
     </div>
