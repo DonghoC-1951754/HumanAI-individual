@@ -8,6 +8,7 @@ from huggingface_hub import InferenceClient
 from google import genai
 import requests
 from google.genai import types
+from langchain.chat_models import init_chat_model
 
 app = Flask(__name__)
 CORS(app)
@@ -17,46 +18,6 @@ def get_image_base64(image_url):
     response.raise_for_status()
     return base64.b64encode(response.content).decode('utf-8')
 
-@app.route('/api/data')
-def get_data():
-    return jsonify({'message': 'Hello from Flask!'})
-
-@app.route('/google-gemma', methods=['POST'])
-def test():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image uploaded'}), 400
-
-    image_file = request.files['image']
-    image_bytes = image_file.read()
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-
-    client = InferenceClient(
-        provider="nebius",
-        api_key="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",
-    )
-
-    completion = client.chat.completions.create(
-        model="google/gemma-3-27b-it",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Lijst in bulletpoints de verkeersborden (in Vlaanderen/belgie) op de afbeelding waar je echt zeker van bent samen met een korte uitleg van wat ze betekenen."
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_b64}"
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens=500,
-    )
-    return jsonify({'message': completion.choices[0].message.content})
 
 @app.route('/gemini', methods=['POST'])
 def test3():
@@ -83,7 +44,7 @@ def test3():
             'Can you recognize the traffic signs in the image and provide a short description of each?'
             ]
         )
-        print(response.text)
+        # print(response.text)
         return jsonify({ "message": response.text })
 
     except Exception as e:
@@ -131,43 +92,29 @@ def test4():
         max_tokens=512,
     )
 
-    print(completion.choices[0].message)
+    # print(completion.choices[0].message)
     return jsonify({'message': completion.choices[0].message.content})
 
-@app.route('/minicpm', methods=['POST'])
-def test2():
-    client = OpenAI(
-        base_url="https://api.friendli.ai/dedicated/v1",
-        api_key="flp_iXJ1ZktolLqYd0n7O3KGib36FIv0Qde17yKviu997Nub7"
-    )
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image uploaded'}), 400
-    image_file = request.files['image']
-    image_bytes = image_file.read()
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+@app.route('/contextual-validation', methods=['POST'])
+def test5():
+    data = request.get_json()
 
-    completion = client.chat.completions.create(
-        model="google/gemma-3-27b-it",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Lijst in bulletpoints de verkeersborden op de afbeelding op met een korte uitleg van wat ze betekenen. En houdt het enkel op de bulletpoints."
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_b64}"
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens=200,
-    )
-    return jsonify({'message': completion.choices[0].message.content})
+    if not data or 'gemini_output' not in data or 'llama_output' not in data:
+        return jsonify({'error': 'Missing required data. Please provide both gemini_output and llama_output.'}), 400
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    gemini_output = data['gemini_output']
+    llama_output = data['llama_output']
+    # print("Gemini Output:", gemini_output)
+    # print("Llama Output:", llama_output)
+
+    prompt = f"""I want to validate the following two outputs from two different AI models in the context of traffic sign recognition.
+    The first output is from the Gemini model, and the second output is from the Llama model.
+    The first output is: {gemini_output}
+    The second output is: {llama_output}
+    I want you to provide the real answer for the traffic sign recognition task by taking the best of the two outputs or modifying them if needed. And don't put other texts in your answer just start your answer with "Here the identified traffic signs and rules on the image"
+    """
+
+    model = init_chat_model("gpt-4o-mini", model_provider="openai")
+    response = model.invoke(prompt).content
+    return jsonify({"message": response})
+
