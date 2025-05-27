@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
-const Prompt = ({ imageId, setImageId }) => {
+const Prompt = ({ imageId, setImageId, accessToken }) => {
   const [geminiText, setGeminiText] = useState("");
   const [llamaText, setLlamaText] = useState("");
   const [validationResult, setValidationResult] = useState(null);
@@ -18,6 +18,8 @@ const Prompt = ({ imageId, setImageId }) => {
   const [userOutputLoading, setUserOutputLoading] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [autoUpdated, setAutoUpdated] = useState(false);
+  const [locationInfo, setLocationInfo] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
 
   // Track when imageId is updated from Mapillary navigation
   useEffect(() => {
@@ -32,6 +34,91 @@ const Prompt = ({ imageId, setImageId }) => {
     return () => clearTimeout(timer);
   }, [imageId]);
 
+  // Fetch location info when imageId changes
+  useEffect(() => {
+    if (imageId && imageId.trim() !== "" && accessToken) {
+      fetchLocationInfo(imageId);
+    } else {
+      setLocationInfo("");
+    }
+  }, [imageId, accessToken]);
+
+  const fetchLocationInfo = async (imageKey) => {
+    setLocationLoading(true);
+    try {
+      const response = await fetch(
+        `https://graph.mapillary.com/${imageKey}?fields=computed_geometry,computed_compass_angle&access_token=${accessToken}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch image data from Mapillary");
+      }
+
+      const imageData = await response.json();
+      const { coordinates } = imageData.computed_geometry;
+      const [longitude, latitude] = coordinates;
+
+      // Reverse geocoding using OpenStreetMap Nominatim
+      const geocodeResponse = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`,
+        {
+          headers: {
+            "User-Agent": "TrafficSignAnalysis/1.0", // Nominatim requires this
+          },
+        }
+      );
+
+      if (geocodeResponse.ok) {
+        const geocodeData = await geocodeResponse.json();
+
+        if (geocodeData && geocodeData.address) {
+          const address = geocodeData.address;
+          const locationParts = [];
+
+          if (address.city) {
+            locationParts.push(address.city);
+          } else if (address.town) {
+            locationParts.push(address.town);
+          } else if (address.village) {
+            locationParts.push(address.village);
+          } else if (address.municipality) {
+            locationParts.push(address.municipality);
+          } else if (address.suburb) {
+            locationParts.push(address.suburb);
+          }
+
+          if (address.state) {
+            locationParts.push(address.state);
+          } else if (address.region) {
+            locationParts.push(address.region);
+          }
+
+          if (address.country) {
+            locationParts.push(address.country);
+          }
+
+          if (locationParts.length > 0) {
+            setLocationInfo(locationParts.join(", "));
+          } else {
+            setLocationInfo(
+              geocodeData.display_name ||
+                `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+            );
+          }
+        } else {
+          setLocationInfo(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        }
+      } else {
+        setLocationInfo(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      }
+    } catch (error) {
+      console.error("Error fetching location info:", error);
+      setLocationInfo("Location unavailable");
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
   const handleExplanationClick = async () => {
     if (!imageId) {
       alert("Please enter an image ID first");
@@ -45,8 +132,12 @@ const Prompt = ({ imageId, setImageId }) => {
     setShowExplanation(false);
 
     try {
-      const geminiPromise = sendImageIdToBackend(imageId, "gemini");
-      const llamaPromise = sendImageIdToBackend(imageId, "llama");
+      const geminiPromise = sendImageIdToBackend(
+        imageId,
+        "gemini",
+        locationInfo
+      );
+      const llamaPromise = sendImageIdToBackend(imageId, "llama", locationInfo);
 
       const [geminiResult, llamaResult] = await Promise.allSettled([
         geminiPromise,
@@ -79,7 +170,8 @@ const Prompt = ({ imageId, setImageId }) => {
         const validationOutput = await performValidation(
           imageId,
           geminiOutput,
-          llamaOutput
+          llamaOutput,
+          locationInfo
         );
 
         if (validationOutput) {
@@ -101,13 +193,16 @@ const Prompt = ({ imageId, setImageId }) => {
     }
   };
 
-  const sendImageIdToBackend = async (imageId, model) => {
+  const sendImageIdToBackend = async (imageId, model, location) => {
     try {
       const endpoint = model === "gemini" ? "/gemini" : "/llama";
       const response = await fetch(`http://localhost:5000${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageId }),
+        body: JSON.stringify({
+          imageId,
+          location, // Add the location here
+        }),
       });
 
       if (!response.ok) {
@@ -124,7 +219,12 @@ const Prompt = ({ imageId, setImageId }) => {
     }
   };
 
-  const performValidation = async (imageId, geminiOutput, llamaOutput) => {
+  const performValidation = async (
+    imageId,
+    geminiOutput,
+    llamaOutput,
+    location
+  ) => {
     try {
       setValidationLoading(true);
 
@@ -137,6 +237,7 @@ const Prompt = ({ imageId, setImageId }) => {
             image_id: imageId,
             gemini_output: geminiOutput,
             llama_output: llamaOutput,
+            location: location,
           }),
         }
       );
@@ -219,7 +320,7 @@ const Prompt = ({ imageId, setImageId }) => {
 
       <div className="p-4">
         {/* Image ID input with icon */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label
             htmlFor="imageId"
             className="block text-sm font-medium text-gray-700 mb-1"
@@ -259,6 +360,44 @@ const Prompt = ({ imageId, setImageId }) => {
               Image ID updated from Mapillary navigation
             </div>
           )}
+        </div>
+
+        {/* Location Information Field */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Location
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              readOnly
+              className="pl-10 block w-full border border-gray-300 rounded-lg p-2.5 bg-gray-50 text-sm text-gray-600"
+              placeholder="Location will appear here..."
+              value={locationLoading ? "Loading location..." : locationInfo}
+            />
+          </div>
         </div>
 
         {/* Analyze button */}

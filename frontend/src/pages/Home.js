@@ -9,7 +9,7 @@ const Home = () => {
   return (
     <div className="h-screen flex">
       <Mapillary imageId={imageId} accessToken={accessToken} />
-      <Prompt imageId={imageId} setImageId={setImageId} />
+      <Prompt imageId={imageId} setImageId={setImageId} accessToken={accessToken} />
     </div>
   );
 };
