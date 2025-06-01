@@ -617,8 +617,81 @@ const Prompt = ({ imageId, setImageId, accessToken }) => {
                     No Gemini data available yet
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>{geminiText}</ReactMarkdown>
+                  <div className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-headings:font-semibold prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:font-semibold prose-ul:space-y-1 prose-ol:space-y-1 prose-li:text-gray-700 prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm">
+                    <ReactMarkdown
+                      components={{
+                        // Custom heading styles
+                        h1: ({ children }) => (
+                          <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-xl font-semibold text-gray-900 mb-3 mt-5">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">
+                            {children}
+                          </h3>
+                        ),
+
+                        // Enhanced paragraph spacing
+                        p: ({ children }) => (
+                          <p className="text-gray-700 leading-relaxed mb-4">
+                            {children}
+                          </p>
+                        ),
+
+                        // Better list formatting
+                        ul: ({ children }) => (
+                          <ul className="list-disc pl-6 mb-4 space-y-2">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal pl-6 mb-4 space-y-2">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="text-gray-700 leading-relaxed">
+                            {children}
+                          </li>
+                        ),
+
+                        // Enhanced strong/bold text
+                        strong: ({ children }) => (
+                          <strong className="font-semibold text-gray-900">
+                            {children}
+                          </strong>
+                        ),
+
+                        // Better blockquote styling
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-blue-500 pl-4 py-2 mb-4 italic bg-blue-50 rounded-r">
+                            {children}
+                          </blockquote>
+                        ),
+
+                        // Code formatting
+                        code: ({ children }) => (
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800">
+                            {children}
+                          </code>
+                        ),
+
+                        // Code block formatting
+                        pre: ({ children }) => (
+                          <pre className="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto mb-4">
+                            {children}
+                          </pre>
+                        ),
+                      }}
+                    >
+                      {geminiText}
+                    </ReactMarkdown>
                   </div>
                 )
               ) : activeTab === "llama" ? (
@@ -634,8 +707,81 @@ const Prompt = ({ imageId, setImageId, accessToken }) => {
                     No Llama data available yet
                   </div>
                 ) : (
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>{llamaText}</ReactMarkdown>
+                  <div className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-headings:font-semibold prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:font-semibold prose-ul:space-y-1 prose-ol:space-y-1 prose-li:text-gray-700 prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm">
+                    <ReactMarkdown
+                      components={{
+                        // Custom heading styles
+                        h1: ({ children }) => (
+                          <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-xl font-semibold text-gray-900 mb-3 mt-5">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">
+                            {children}
+                          </h3>
+                        ),
+
+                        // Enhanced paragraph spacing
+                        p: ({ children }) => (
+                          <p className="text-gray-700 leading-relaxed mb-4">
+                            {children}
+                          </p>
+                        ),
+
+                        // Better list formatting
+                        ul: ({ children }) => (
+                          <ul className="list-disc pl-6 mb-4 space-y-2">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal pl-6 mb-4 space-y-2">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="text-gray-700 leading-relaxed">
+                            {children}
+                          </li>
+                        ),
+
+                        // Enhanced strong/bold text
+                        strong: ({ children }) => (
+                          <strong className="font-semibold text-gray-900">
+                            {children}
+                          </strong>
+                        ),
+
+                        // Better blockquote styling
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-blue-500 pl-4 py-2 mb-4 italic bg-blue-50 rounded-r">
+                            {children}
+                          </blockquote>
+                        ),
+
+                        // Code formatting
+                        code: ({ children }) => (
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800">
+                            {children}
+                          </code>
+                        ),
+
+                        // Code block formatting
+                        pre: ({ children }) => (
+                          <pre className="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto mb-4">
+                            {children}
+                          </pre>
+                        ),
+                      }}
+                    >
+                      {llamaText}
+                    </ReactMarkdown>
                   </div>
                 )
               ) : validationLoading ? (

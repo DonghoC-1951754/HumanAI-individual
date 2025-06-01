@@ -35,11 +35,10 @@ def test3():
 
         prompt = (
             f""" Find every traffic sign on the image considering this is in {location}.
-            For each traffic sign you recognized provide a list of:
-                1. The description of the traffic sign
-                2. The meaning of the traffic sign in {location}
-                3. The traffic sign code "Traffic Sign Code: [CODE]"
-            Also put a whitespace between each traffic sign description.
+            And display them using the following format for each traffic sign you recognized:
+            **1.** [the description].
+            *   **Meaning:** [the meaning of the traffic sign]
+            *   **Traffic Sign Code:** [the traffic sign code]
             """
         )
 
@@ -80,11 +79,11 @@ def test4():
 
     prompt = (
             f""" Find every traffic sign on the image considering this is in {location}.
-            For each traffic sign you recognized provide a list of:
-                1. The description of the traffic sign
-                2. The meaning of the traffic sign in {location}
-                3. The traffic sign code "Traffic Sign Code: [CODE]"
-            Also put a whitespace between each traffic sign description.
+            And display them using the following format for each traffic sign you recognized:
+            **1.** [the description].
+            *   **Meaning:** [the meaning of the traffic sign]
+            *   **Traffic Sign Code:** [the traffic sign code]
+            Also remove duplicates if there are any in the output.
             """
     )
 
