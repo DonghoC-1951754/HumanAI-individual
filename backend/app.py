@@ -121,7 +121,7 @@ def test5():
     prompt = f"""Compare two outputs from different AI models regarding traffic signs in {location}.
                 Gemini output: {gemini_output}
                 Llama output: {llama_output}
-                First Only return the output that is consistent between the two models in this format also generate the traffic sign code that matches the meaning according to the rules in {location}:
+                First Only return the output that is contextually consistent between the two models in this format also generate the traffic sign code that matches the meaning according to the rules in {location}:
                 **Consistent output: **
                 \n**[bulletpoint nr.]** [the description].
                 *   **Meaning:** [the meaning of the traffic sign]
