@@ -35,10 +35,9 @@ def test3():
 
         prompt = (
             f""" Find every traffic sign on the image considering this is in {location}.
-            And display them using the following format for each traffic sign you recognized:
+            And display them using the following format for each traffic sign you recognized, don't mention the traffic sign code:
             **1.** [the description].
             *   **Meaning:** [the meaning of the traffic sign]
-            *   **Traffic Sign Code:** [the traffic sign code]
             """
         )
 
@@ -82,7 +81,6 @@ def test4():
             And display them using the following format for each traffic sign you recognized:
             **1.** [the description].
             *   **Meaning:** [the meaning of the traffic sign]
-            *   **Traffic Sign Code:** [the traffic sign code]
             Also remove duplicates if there are any in the output.
             """
     )
@@ -123,9 +121,12 @@ def test5():
     prompt = f"""Compare two outputs from different AI models regarding traffic signs in {location}.
                 Gemini output: {gemini_output}
                 Llama output: {llama_output}
-                Take the description and meaning that are the same in both outputs.
-                Combine the 2 outputs into a single final output.
-                Also check whether the traffic sign codes of the meanings and descriptions are correct acoording to the rules in {location}.
+                First Only return the output that is consistent between the two models in this format also generate the traffic sign code that matches the meaning according to the rules in {location}:
+                **Consistent output: **
+                \n**[bulletpoint nr.]** [the description].
+                *   **Meaning:** [the meaning of the traffic sign]
+                *   **Traffic Sign Code:** [the traffic sign code]
+                Do the same for outputs from both models that are not consistent and start with **Inconsistent output: **.
                 """
 
     model = init_chat_model("gpt-4o-mini", model_provider="openai")
